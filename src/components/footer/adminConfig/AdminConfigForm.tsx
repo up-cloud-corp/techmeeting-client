@@ -57,64 +57,53 @@ export const AdminConfigForm: React.FC<AdminConfigFormProps> = (props: AdminConf
         <div ref={anchor} />
       </Box>
       <Box m={2}>
-        <Button variant="contained" color={roomInfo.isAdmin ? 'primary': 'secondary'}
-          style={{textTransform:'none'}}
-          onClick = { () => {
-            setDoGoogleAuth(false)
-            if (roomInfo.isAdmin){
-              roomInfo.isAdmin = false
-            }else{
-              conference.checkAdmin().then((info)=>{
-                roomInfo.isAdmin = true
-                roomInfo.loginInfo = info
-                //  console.log("checkAdmin() succeed.")
-              }).catch(()=>{
-                conference.setAuthInfo(undefined, undefined)
-                setDoGoogleAuth(true)
-              })
-            }
-         }}
-        >{roomInfo.isAdmin ? 'Leave admin' : 'Get admin'} </Button> &nbsp;
-        <Button {...btnArgs} onClick={()=>{ setShowEditRoom(true) }}>Edit room</Button> &nbsp;
         <Button {...btnArgs} onClick = { () => {
             if (roomInfo.isAdmin){
               conference.dataConnection.sync.sendTrackLimits('', [participants.local.remoteVideoLimit, participants.local.remoteAudioLimit])
             }
           }}
-        >Sync limits</Button> &nbsp;
-
-
+        >{t('adSynclimits')}</Button> &nbsp;
         <span style={{backgroundColor:'rgba(0,0,0,0.1)', color:'white', position:'absolute', right:'1.5em',}} onClick={()=>{
           setShowPosition(true)
         }}>&nbsp;LPS&nbsp;</span>
       </Box>
       <Box m={2}>
+      </Box>
+      <Box m={2}>
+        <Button {...btnArgs} onClick={() => {
+          if (roomInfo.isAdmin) { contents.lockAllContents() }
+        }}>{t('adLockAllContents')}</Button>&nbsp;
+        <Button {...btnArgs} onClick={() => {
+          if (roomInfo.isAdmin) { contents.unLockAllContents() }
+        }}>{t('adUnLockAllContents')}</Button>&nbsp;
+      </Box>
+      <Box m={2}>
         <Button {...btnArgs} onClick={() => {
           if (roomInfo.isAdmin) { conference.dataConnection.sendMessage(MessageType.MUTE_VIDEO, true) }
-        }}> Mute all videos </Button> &nbsp;
+        }}>{t('adMuteAllVideos')}</Button> &nbsp;
         <Button {...btnArgs} onClick={() => {
           if (roomInfo.isAdmin) { conference.dataConnection.sendMessage(MessageType.MUTE_VIDEO, false) }
-        }}> Show all videos </Button>&emsp;
+        }}>{t('adShowAllVideos')}</Button>&emsp;
         <Button {...btnArgs} onClick={() => {
           if (roomInfo.isAdmin) { conference.dataConnection.sendMessage(MessageType.MUTE_AUDIO, true) }
-        }}> Mute all mics </Button>&nbsp;
+        }}>{t('adMuteAllMics')}</Button>&nbsp;
         <Button {...btnArgs} onClick={() => {
           if (roomInfo.isAdmin) { conference.dataConnection.sendMessage(MessageType.MUTE_AUDIO, false) }
-        }}> Switch on all mics </Button>
+        }}>{t('adSwitchOnAllMics')}</Button>
       </Box>
       <Box m={2}>
         <Button {...btnArgs} onClick={() => {
           if (roomInfo.isAdmin) {
             contents.removeAllContents()
           }
-        }}> Remove all Contents </Button>&emsp;
+        }}>{t('adRemoveAllContents')}</Button>&emsp;
         <Button {...btnArgs} onClick={() => {
             if (roomInfo.isAdmin){
               const ids = new Set(contents.roomContentsInfo.keys())
               contents.all.forEach(c => ids.add(c.id))
               contents.all.filter(c => c.ownerName === clearName).forEach(c => contents.removeByLocal(c.id))
             }
-        }}> Clear contents by user name </Button> &thinsp;
+        }}>{t('adClearContentsByUserName')}</Button> &thinsp;
         <TextField label="name" type="text" style={{marginTop:-12}}
             value={clearName} onChange={(ev)=>{setClearName(ev.currentTarget.value)}} />
       </Box>
@@ -125,18 +114,18 @@ export const AdminConfigForm: React.FC<AdminConfigFormProps> = (props: AdminConf
               conference.dataConnection.sendMessage(MessageType.RELOAD_BROWSER, {})
             }
           }
-        }}> Reload </Button>&emsp;
+        }}>{t('adReload')}</Button>&emsp;
 
         <Button variant="contained" disabled={!roomInfo.isAdmin}
           style={roomInfo.isAdmin ?
             {backgroundColor:rgb2Color(roomInfo.backgroundFill), color:textForFill, textTransform:'none'}
             : {textTransform:'none'} }
           onClick={()=>{if (roomInfo.isAdmin){ setShowFillPicker(true) }}} ref={fillButton}>
-          Back color</Button>
+          {t('adBackColor')}</Button>
         <Popover open={showFillPicker}
           onClose={()=>{
             setShowFillPicker(false)
-            conference.dataConnection.setRoomProp('backgroundFill', JSON.stringify(roomInfo.backgroundFill))
+            conference.dataConnection.setRoomProp({backgroundFill: JSON.stringify(roomInfo.backgroundFill)})
           }}
           anchorEl={fillButton.current} anchorOrigin={{vertical:'bottom', horizontal:'right'}}>
           <SketchPicker color = {{r:roomInfo.backgroundFill[0], g:roomInfo.backgroundFill[1],
@@ -153,11 +142,11 @@ export const AdminConfigForm: React.FC<AdminConfigFormProps> = (props: AdminConf
             {backgroundColor:rgb2Color(roomInfo.backgroundColor), color:textForColor, textTransform:'none'}
             : {textTransform:'none'} }
           onClick={()=>{if (roomInfo.isAdmin){ setShowColorPicker(true)} }} ref={colorButton}>
-          Pattern color</Button>
+          {t('adPatternColor')}</Button>
         <Popover open={showColorPicker}
           onClose={()=>{
             setShowColorPicker(false)
-            conference.dataConnection.setRoomProp('backgroundColor', JSON.stringify(roomInfo.backgroundColor))
+            conference.dataConnection.setRoomProp({backgroundColor: JSON.stringify(roomInfo.backgroundColor)})
           }}
           anchorEl={colorButton.current} anchorOrigin={{vertical:'bottom', horizontal:'right'}}>
           <SketchPicker color = {{r:roomInfo.backgroundColor[0], g:roomInfo.backgroundColor[1],
@@ -172,10 +161,14 @@ export const AdminConfigForm: React.FC<AdminConfigFormProps> = (props: AdminConf
           if (roomInfo.isAdmin) {
             roomInfo.backgroundFill = roomInfo.defaultBackgroundFill
             roomInfo.backgroundColor = roomInfo.defaultBackgroundColor
-            conference.dataConnection.setRoomProp('backgroundFill', JSON.stringify(roomInfo.backgroundFill))
-            conference.dataConnection.setRoomProp('backgroundColor', JSON.stringify(roomInfo.backgroundColor))
+            // Send multiple properties in a single message using unified API
+            // ver1.3.0+ - Now using unified setRoomProp
+            conference.dataConnection.setRoomProp({
+              'backgroundFill': JSON.stringify(roomInfo.backgroundFill),
+              'backgroundColor': JSON.stringify(roomInfo.backgroundColor)
+            })
           }
-        }}> Default </Button>&emsp;
+        }}>{t('adDefault')}</Button>&emsp;
       </Box>
       {showPosition ? <Popover open={showPosition} onClose={closePosition} anchorEl={anchor.current}>
         <PositionServerForm close={closePosition}/>

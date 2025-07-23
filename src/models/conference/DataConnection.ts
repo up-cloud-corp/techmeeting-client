@@ -51,10 +51,18 @@ export class DataConnection {
   public isConnected(){
     return this.dataSocket?.readyState === WebSocket.OPEN
   }
-  public setRoomProp(name:string, value:string){
-    //  console.log(`setRoomProp(${name}, ${value})`)
-    this.sendMessage(MessageType.ROOM_PROP, [name, value])
-    roomInfo.onUpdateProp(name, value)
+
+  // Unified room property setter with object format
+  // Format: {key1: value1, key2: value2}
+  // ver1.3.0
+  public setRoomProp(props: {[key: string]: string}){
+    // Send in unified object format
+    this.sendMessage(MessageType.ROOM_PROP, props)
+
+    // Update local properties
+    for (const [key, value] of Object.entries(props)) {
+      roomInfo.onUpdateProp(key, value)
+    }
   }
 
   private requestAll(sendRandP:boolean){

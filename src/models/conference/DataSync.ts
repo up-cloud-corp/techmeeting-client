@@ -103,8 +103,16 @@ export class DataSync{
   }
 
   //  message handler
-  private onRoomProp(key: string, value: string){
-    roomInfo.onUpdateProp(key, value)
+  private onRoomProp(data: {[key: string]: string}){
+    // Format: {key1: value1, key2: value2}
+    // ver1.3.0
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      const props = data as {[key: string]: string};
+      for (const [key, value] of Object.entries(props)) {
+        roomInfo.onUpdateProp(key, value);
+      }
+      return;
+    }
   }
   private onParticipantTrackLimits(limits:number[]){
     participants.local.remoteVideoLimit = limits[0]
@@ -415,7 +423,7 @@ export class DataSync{
     }
     recorder.recordMessage(msg)
     switch(msg.t){
-      case MessageType.ROOM_PROP: this.onRoomProp(...(JSON.parse(msg.v) as [string, string])); break
+      case MessageType.ROOM_PROP: this.onRoomProp(JSON.parse(msg.v)); break
       case MessageType.REQUEST_ALL: this.sendAllAboutMe(false); break
       case MessageType.REQUEST_TO: this.sendAllAboutMe(false); break
       case MessageType.PARTICIPANT_AFK: this.onAfkChanged(msg.p, JSON.parse(msg.v)); break

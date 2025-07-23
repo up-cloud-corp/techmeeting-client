@@ -8,7 +8,8 @@ export class RoomInfo{
 
   @observable roomProps = new Map<string, string>()
   @observable.ref loginInfo?: RoomLoginInfo
-  @observable isAdmin=false
+  // ver1.3 Granting administrative privileges to all users
+  @observable isAdmin=true
   @observable backgroundFill = this.defaultBackgroundFill
   @observable backgroundColor = this.defaultBackgroundColor
 

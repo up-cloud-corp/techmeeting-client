@@ -27,6 +27,12 @@ export const ScreenContent: React.FC<ContentProps> = (props:ContentProps) => {
 
   const simulcastRatios = [0.25, 0.5, 0.75, 4.0 / 3, 2, 4]
   //const simulcastRatios:number[] = []
+
+  // ver1.3 Fix screen Position
+  useEffect(() => {
+    member.current.content = props.content
+  }, [props.content]);
+
   useEffect(() => {
     //  Create tracks.
     if (!member.current?.tracks){
