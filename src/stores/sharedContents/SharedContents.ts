@@ -327,6 +327,25 @@ export class SharedContents extends EventEmitter {
     this.roomContentsInfo.clear()
     this.updateAll()
   }
+  //ver1.3.0 lock all contents
+  lockAllContents(){
+    this.roomContents.forEach(c => {
+      if (c.pinned !== true){
+        c.pinned = true
+        this.updateByLocal(c)
+      }
+    })
+  }
+
+  //ver1.3.0 unlock all contents
+  unLockAllContents(){
+    this.roomContents.forEach(c => {
+      if (c.pinned !== false){
+        c.pinned = false
+        this.updateByLocal(c)
+      }
+    })
+  }
 
   // create a new unique content id
   private getUniqueId(): string {

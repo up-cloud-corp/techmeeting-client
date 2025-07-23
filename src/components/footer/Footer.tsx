@@ -318,7 +318,7 @@ export const Footer: React.FC<{height?:number}> = (props) => {
         <RecorderButton {...props} size={fabSize} iconSize={iconSize}
           recorderStep={recorderStep} setRecorderStep={setRecorderStep} />
         <FabMain size={fabSize} onClick={openAdmin} divRef={adminButton}
-          style={{marginRight:10, opacity:0.1}}>
+          style={{marginRight:10}}>
           <SettingsIcon style={{width:iconSize, height:iconSize}} />
         </FabMain>
       </div>

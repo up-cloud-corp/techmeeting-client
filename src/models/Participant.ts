@@ -111,7 +111,8 @@ export interface Physics {
 }
 export const defaultPhysics: Physics = {
   located: true,
-  onStage: false,
+  // ver1.3 change false to true
+  onStage: true,
   awayFromKeyboard: false,
 }
 export interface Viewpoint{
