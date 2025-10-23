@@ -51,13 +51,15 @@ export const ContentLine: React.FC<TextLineStyle & {content: SharedContentInfo}>
         <Button ref={ref} variant="contained" className={classes.line}
           style={{backgroundColor:colors[0], color:colors[1], margin: '1px 0 1px 0', padding:0, textTransform:'none'}}
           onClick={() => {
-            const found = contents.find(props.content.id)
+            // ver1.4.0 add function to check if content is out of range
+            const found = locatedContentOnly(contents.find(props.content.id))
             if (found){
               map.focusOn(found, mulV2(0.5, found.size))
             }else{
               contents.requestContent([props.content.id])
               const disposer = autorun(()=>{
-                const found = contents.find(props.content.id)
+                // ver1.4.0 add function to check if content is out of range
+                const found = locatedContentOnly(contents.find(props.content.id))
                 if (found){
                   map.focusOn(found, mulV2(0.5, found.size))
                   disposer()
