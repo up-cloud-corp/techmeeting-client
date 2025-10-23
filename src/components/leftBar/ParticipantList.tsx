@@ -12,6 +12,7 @@ import {ParticipantBase} from '@stores/participants/ParticipantBase'
 import {autorun} from 'mobx'
 import {Observer, useObserver} from 'mobx-react-lite'
 import React, { CSSProperties } from 'react'
+import {CursorIcon} from '../utils/CursorIcon'
 import {styleForList} from '../utils/styles'
 import {TextLineStyle} from './LeftBar'
 import {StatusDialog} from './StatusDialog'
@@ -34,6 +35,8 @@ export const ParticipantLine: React.FC<TextLineStyle&{participant: AnyParticipan
   const avatarSrc = useObserver(() => (props.participant.information.avatarSrc))
   const colors = useObserver(() => getColorOfParticipant(props.participant.information))
   const size = useObserver(() => props.lineHeight)
+  // ver1.4.0 add function to monitor mouse sharing state
+  const showMouseIcon = useObserver(() => props.participant.mouse.show && props.participant.id !== participants.localId)
   const classes = styleForList({height:props.lineHeight, fontSize:props.fontSize})
   const [showForm, setShowForm] = React.useState(false)
   const ref = React.useRef<HTMLButtonElement>(null)
@@ -54,6 +57,17 @@ export const ParticipantLine: React.FC<TextLineStyle&{participant: AnyParticipan
     left: 0.5 * lineHeight,
     top: 0.5 * lineHeight,
     pointerEvents: 'none',
+  }
+
+  // ver1.4.0 add function to focus on mouse cursor
+  const onClickShowMouse = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const participant = props.participant
+    if (!participant.mouse.show) return
+    const mouseTarget = { pose: { position: [...participant.mouse.position] } }
+    map.focusOn(mouseTarget as any)
   }
 
   //  console.log(`PColor pid:${props.participant.id} colors:${colors}`, props.participant)
@@ -103,6 +117,19 @@ export const ParticipantLine: React.FC<TextLineStyle&{participant: AnyParticipan
           onClick={onClick} onContextMenu={onContextMenu}>
             <span className={classes.line}>{name}</span>
         </Button>
+        {/* ver1.4.0 add button to move to mouse cursor */}
+        {showMouseIcon ?
+          <IconButton
+            style={{margin: 0, padding: "0px 4px", minWidth: 'auto'}}
+            onClick={onClickShowMouse}
+          >
+            <CursorIcon
+              color={colors[0]}
+              width={lineHeight * 0.6}
+              height={lineHeight * 0.9}
+            />
+          </IconButton> : undefined
+        }
         {props.participant.id === participants.localId ?
           <SignalQualityIcon size="16px" quality={props.participant.quality}
            transport={conference.rtcTransports.sendTransport} /> :

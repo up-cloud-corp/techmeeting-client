@@ -56,6 +56,8 @@ export class Participants {
   @action
   leave(participantId: string) {
     this.remote.delete(participantId)
+    // ver1.4.0 remove yarn phone
+    this.yarnPhones.delete(participantId)
   }
 
   @action leaveAll(){

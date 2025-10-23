@@ -26,6 +26,7 @@ import subjectIcon from '@iconify/icons-material-symbols/subject'
 
 import {contentsToSave, loadToContents} from '@models/ISharedContent'
 import {useTranslation} from '@models/locales'
+import {MessageType} from '@models/conference/DataMessageType'
 import {MSTrack} from '@models/conference/RtcConnection'
 import {createContent, createContentFromText, createContentOfIframe, createContentOfText,
   createContentOfVideo, createContentOfSameRoom} from '@stores/sharedContents/SharedContentCreator'

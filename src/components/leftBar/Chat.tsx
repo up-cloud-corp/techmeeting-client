@@ -136,7 +136,7 @@ export const ChatInBar: React.FC<TextLineStyle>  = (props) => {
               chat.sendTo = ''
             }
             //  if (ev.key === 'Enter'){  }
-            if (ev.key === '\n'){ //  CTRL + Enter
+            if (ev.key === 'Enter' && (ev.ctrlKey)){ //  CTRL + Enter ver1.4.0:「\n」→「'Enter' && ctrlKey」 
               sendChatMessage(text, nameTo ? chat.sendTo : '')
               setText('')
             }
