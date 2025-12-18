@@ -7,15 +7,14 @@ import {BMMessage} from './DataMessage'
 import {ClientToServerOnlyMessageType, MessageType, ObjectArrayMessageTypes, StringArrayMessageTypes} from './DataMessageType'
 import {DataSync} from '@models/conference/DataSync'
 import {AudioMeter} from '@models/audio/AudioMeter'
-import {connLog, connDebug} from '@models/utils'
+import {UCLogger} from '@models/utils'
 import {EventEmitter} from 'eventemitter3'
 import {MSConnectMessage} from './MediaMessages'
 import {messageLoads} from '@stores/MessageLoads'
 import { conference } from './Conference'
 
 //  Log level and module log options
-export const dataLog = connLog
-export const dataDebug = connDebug
+export const connectionLog = UCLogger.getByFeature("connection");
 export let dataRequestInterval:number = 100
 
 // config.js
@@ -78,7 +77,7 @@ export class DataConnection {
     this.peer_ = peer //This is the username
 
 
-    dataLog()(`connect(${room}, ${peer})`)
+    connectionLog.info(`connect(${room}, ${peer})`)
     const self = this as DataConnection
 
 
@@ -88,7 +87,7 @@ export class DataConnection {
         console.warn(`dataSocket already exists.`)
       }
       function onOpen(){
-        dataLog()('data connected.')
+        connectionLog.info('data connected.')
         self.messagesToSendToRelay = []
         if (config.dataServer){
           const msg:MSConnectMessage = {
@@ -142,7 +141,7 @@ export class DataConnection {
         self.dataSocket?.close(3000, 'onError')
       }
       function onClose(e: CloseEvent){
-        dataLog()('onClose() for dataSocket code:' + e.code)
+        connectionLog.info('onClose() for dataSocket code:' + e.code)
         self.disconnect()
       }
       function setHandler(){
@@ -182,7 +181,7 @@ export class DataConnection {
       func()
     })
     this.emit('disconnect')
-    connLog()(`dataSocket emits 'disconnect'`)
+    connectionLog.info(`dataSocket emits 'disconnect'`)
     return promise
   }
   public forceClose(){

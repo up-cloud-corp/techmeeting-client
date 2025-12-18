@@ -1,8 +1,10 @@
-import { count } from 'console'
 import {MSTransportDirection} from './MediaMessages'
 import {RtcConnection, RemotePeer, MSTrack, RemoteProducer, TrackRoles} from './RtcConnection'
 import {RtcTransportStatsGot, updateTransportStat} from './RtcTransportStatsGot'
 import * as mediasoup from 'mediasoup-client'
+import { UCLogger } from '@models/utils'
+
+const connectionLog = UCLogger.getByFeature("connection");
 
 function assert(input: any): asserts input {
   if (!input) {
@@ -37,18 +39,18 @@ export class RtcTransports extends RtcConnection{
 
   // mediasoup
   public createTransport(dir: MSTransportDirection, remote?: RemotePeer){
-    console.log(`createTransport(): dir:${dir} remote:${remote?.peer}`)
+    connectionLog.info(`createTransport(): dir:${dir} remote:${remote?.peer}`)
     if (dir === 'receive' && !remote){
-      console.error(`createTransport(); remote must be specified for receive transport.`)
+      connectionLog.error(`createTransport(); remote must be specified for receive transport.`)
     }
     const promise = new Promise<mediasoup.types.Transport>((resolve, reject)=>{
       super.createTransport(dir, remote).then(transport => {
         transport.on('connect', ({ dtlsParameters }, callback, errback) => {
-          //  console.log('transport connect event', 'send');
+          //  connectionLog.info('transport connect event', 'send');
           super.connectTransport(transport, dtlsParameters, remote?.peer).then(()=>{
             callback()
           }).catch((error:Error)=>{
-            console.error(`error in connecting transport:${error.message}`);
+            connectionLog.error(`error in connecting transport:${error.message}`);
             super.leave()
             super.disconnect(3000, 'Error in setting up server-side producer')
             errback(error)
@@ -57,14 +59,14 @@ export class RtcTransports extends RtcConnection{
         });
         if (dir === 'send'){
           transport.on('produce', ({ kind, rtpParameters, appData }, callback, errback) => {
-            //console.log('transport produce event', rtpParameters);
+            //connectionLog.info('transport produce event', rtpParameters);
             const track = (appData as ProducerData).track
             super.produceTransport({
               transport:transport.id, kind, role:track.role, rtpParameters, paused:false, appData
             }).then((id)=>{
               callback({id})
             }).catch((error)=>{
-              console.error('Error in setting up server-side producer. disconnect.', error)
+              connectionLog.error('Error in setting up server-side producer. disconnect.', error)
               super.leave()
               super.disconnect(3000, 'Error in setting up server-side producer')
               errback(error)
@@ -73,23 +75,23 @@ export class RtcTransports extends RtcConnection{
           })
         }
         transport.on('connectionstatechange', (state) => {
-          console.log(`transport ${transport.id} connection state change: ${state}`);
+          connectionLog.info(`transport ${transport.id} connection state change: ${state}`);
           if (dir==='receive' && state === 'connected'){
             assert(remote)
             const consumers = Array.from(remote.producers.values()).map(p => p.consumer).filter(c => c)
             for(const consumer of consumers){
               this.resumeConsumer(consumer!.id, remote.peer)
-              //console.log(`resumeConsumer finished for ${consumer!.id}.`)
+              //connectionLog.info(`resumeConsumer finished for ${consumer!.id}.`)
               consumer!.resume()
             }
           }
           if (state === 'closed' || state === 'disconnected') {
-            //  console.log('transport closed ... leaving the room and resetting');
+            //  connectionLog.info('transport closed ... leaving the room and resetting');
             //TODO: leaveRoom();
           }
           // leave when faild
           if (state === 'failed') {
-            console.error('transport closed ... leaving the room and resetting');
+            connectionLog.error('transport closed ... leaving the room and resetting');
             transport.close()
             super.leave()
             super.disconnect(3000, 'transport closed ... leaving the room and resetting')
@@ -148,7 +150,7 @@ export class RtcTransports extends RtcConnection{
           return old.role === track.role && old.track.kind === track.track.kind
         })
         if (oldProducer){
-          console.log("oldProducer found")
+          connectionLog.info("oldProducer found")
           oldProducer.replaceTrack(track).then(()=>{
             (oldProducer.appData as ProducerData).track = track
             oldProducer.resume()
@@ -159,14 +161,14 @@ export class RtcTransports extends RtcConnection{
             // add track to produce
             let codecOptions=undefined
             if (track.track.kind === 'audio'){
-              //console.log(`getSendTransport audio settings:`,track.track.getSettings())
+              //connectionLog.info(`getSendTransport audio settings:`,track.track.getSettings())
               const settings = track.track.getSettings() as any
               codecOptions =
               {
                 opusStereo: !(settings.channelCount===1),
                 opusDtx: true
               }
-              //console.log('codec options:', codecOptions)
+              //connectionLog.info('codec options:', codecOptions)
             }
 
             transport.produce({
@@ -178,7 +180,7 @@ export class RtcTransports extends RtcConnection{
               codec
             }).then( producer => {
               this.localProducers.push(producer)
-              // console.log("[MIC]RlocalProducers pushed"+ this.localProducers.length)
+              // connectionLog.info("[MIC]RlocalProducers pushed"+ this.localProducers.length)
               resolve(producer)
             }).catch(reject)
           })
@@ -188,7 +190,7 @@ export class RtcTransports extends RtcConnection{
     return promise
   }
   public RemoveTrackByRole(stopTrack:boolean, role:TrackRoles, kind?:mediasoup.types.MediaKind){
-    // console.log("[MIC]RemoveTrackByRoleBofore:" + this.localProducers.length)
+    // connectionLog.info("[MIC]RemoveTrackByRoleBofore:" + this.localProducers.length)
     this.localProducers.forEach((producer)=>{
       const track = (producer.appData as ProducerData).track
       if (track.role === role && (!kind || kind === track.track.kind)){
@@ -199,7 +201,7 @@ export class RtcTransports extends RtcConnection{
         this.localProducers = this.localProducers.filter(p => p !== producer)
         producer.close()
         this.closeProducer(producer.id)
-        // console.log("[MIC]Removed")
+        // connectionLog.info("[MIC]Removed")
         if(this.localProducers.length === 0){
           this.sendTransport?.close()
           delete this.sendTransportPromise
@@ -238,12 +240,12 @@ export class RtcTransports extends RtcConnection{
             transport.consume(consumeParams).then(consumer => {
               if (transport.connectionState === 'connected' || transport.connectionState === 'new' || transport.connectionState === 'connecting'){
                 this.resumeConsumer(consumer.id, producer.peer.peer).then(()=>{
-                  console.log(`[consumer]resumeConsumer finished for ${consumer.id}.`)
+                  connectionLog.info(`[consumer]resumeConsumer finished for ${consumer.id}.`)
                   producer.consumer = consumer
                   resolve(consumer)
                 })
               } else {
-                console.log(`[consumer]resumeConsumer failed connectionState:${transport.connectionState}.`)
+                connectionLog.info(`[consumer]resumeConsumer failed connectionState:${transport.connectionState}.`)
                 reject()
               }
             }).catch(reject)

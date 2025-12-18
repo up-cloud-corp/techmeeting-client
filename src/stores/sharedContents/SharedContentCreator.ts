@@ -11,9 +11,11 @@ import {defaultValue as mapObjectDefaultValue} from '@stores/MapObject'
 import _ from 'lodash'
 import participants from '../participants/Participants'
 import sharedContents from './SharedContents'
-import {contentLog} from '@models/utils'
+import {UCLogger} from '@models/utils'
 import { getGDriveUrl } from './GDriveUtil'
 import {t} from '@models/locales'
+
+const contentLog = UCLogger.getByFeature("content");
 
 export const defaultContent: ISharedContent = Object.assign({}, mapObjectDefaultValue, {
   name: '',
@@ -102,7 +104,7 @@ export function createContentOfIframe(urlStr: string, map: MapData) {
       const fileIdStart = url.pathname.slice(url.pathname.indexOf('/d/') + 3)
       const fileId = fileIdStart.slice(0, fileIdStart.indexOf('/'))
       pasted.url = `id=${fileId}`
-      //  console.log('gdrive url:', pasted.url)
+      //  contentLog.info('gdrive url:', pasted.url)
       pasted.pose.position[0] = map.mouseOnMap[0]
       pasted.pose.position[1] = map.mouseOnMap[1]
       pasted.size[0] = 900
@@ -138,7 +140,7 @@ export function createContentOfIframe(urlStr: string, map: MapData) {
     }
     if (pasted.type){
       resolve(pasted)
-      contentLog()(`${pasted.type} created url = ${pasted.url}`)
+      contentLog.info(`${pasted.type} created url = ${pasted.url}`)
     }
 })
 }
@@ -247,8 +249,8 @@ export function createContentOfImageUrl(url: string, map: MapData,
   const IMAGESIZE_LIMIT = 500
   const promise = new Promise<SharedContentImp>((resolutionFunc, rejectionFunc) => {
     getImageSize(url).then((size) => {
-      // console.log("mousePos:" + (global as any).mousePositionOnMap)
-      console.log('size:', size)
+      // contentLog.info("mousePos:" + (global as any).mousePositionOnMap)
+      contentLog.info('size:', size)
       const pasted = createContent()
       pasted.type = 'img'
       pasted.url = url
@@ -282,7 +284,7 @@ function updateSigninStatus(isSignedIn:boolean) {
 }
 
 export function createContentOfPdf(file: File, map: MapData, offset?:[number, number]): Promise<SharedContentImp> {
-  console.error('createContentOfPdf called.')
+  contentLog.error('createContentOfPdf called.')
   const promise = new Promise<SharedContentImp>((resolutionFunc, rejectionFunc) => {
     if (gapi) {
       const API_KEY = 'AIzaSyCE4B2cKycH0fVmBznwfr1ynnNf2qNEU9M'
@@ -296,14 +298,14 @@ export function createContentOfPdf(file: File, map: MapData, offset?:[number, nu
         },
       ).then(
         () => {
-          console.log('Before getAuthInstance')
+          contentLog.info('Before getAuthInstance')
           GoogleAuth = gapi.auth2.getAuthInstance()
           // Listen for sign-in state changes.
-          console.log('Before listen updateSigninStatus')
+          contentLog.info('Before listen updateSigninStatus')
           GoogleAuth.isSignedIn.listen(updateSigninStatus)
         },
         (reason:any) => {
-          console.log('gapi.client.init failed:', reason)
+          contentLog.info('gapi.client.init failed:', reason)
         },
       )
     }
@@ -411,7 +413,7 @@ export function createContentsFromDataTransfer(dataTransfer: DataTransfer, map: 
         createContentFromText(str, map).then(c => resolve([c])).catch(reject)
       })
     }else {
-      console.error('Unhandled content types:', dataTransfer?.types)
+      contentLog.error('Unhandled content types:', dataTransfer?.types)
       reject(`Unhandled content types:${dataTransfer?.types}`)
     }
   })

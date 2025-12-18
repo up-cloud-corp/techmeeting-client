@@ -3,8 +3,9 @@ import {MSMessage, MSPositionConnectMessage, MSPositionMessage } from './MediaMe
 import { autorun } from 'mobx'
 import settings from '@stores/Settings'
 import {conference} from '@models/conference'
-import {positionLog} from '@models/utils'
+import {UCLogger} from '@models/utils'
 
+const positionLog = UCLogger.getByFeature("position");
 
 export class PositionConnection {
   positionSocket:WebSocket|undefined = undefined //  Socket to connect LPS
@@ -44,15 +45,15 @@ export class PositionConnection {
     this.room_ = room
     this.peer_ = peer
     this.name_ = name
-    positionLog()(`connect to position server(${room}, ${peer}, ${name})`)
+    positionLog.info(`connect to position server(${room}, ${peer}, ${name})`)
 
     const promise = new Promise<void>((resolve, reject)=>{
       if (!url){ reject(); return }
       if (this.positionSocket){
-        console.warn(`positionSocket already exists.`)
+        positionLog.warn(`positionSocket already exists.`)
       }
       const onOpen = () => {
-        positionLog()('position connected.')
+        positionLog.info('position connected.')
         const msg:MSPositionConnectMessage = {
           type: 'positionConnect',
           id: this.id,
@@ -61,15 +62,15 @@ export class PositionConnection {
           peer: this.peer
         }
         const sendText = JSON.stringify(msg)
-        console.debug(`sendText=${sendText}`)
+        positionLog.debug(`sendText=${sendText}`)
         this.positionSocket?.send(sendText)
         resolve()
       }
       const onMessage = (ev: MessageEvent<any>)=> {
-        console.debug(`position socket:`, ev)
+        positionLog.debug(`position socket:`, ev)
         if (typeof ev.data === 'string') {
           const base = JSON.parse(ev.data) as MSMessage
-          //console.log(`position sock onMessage`, JSON.stringify(base))
+          //positionLog.log(`position sock onMessage`, JSON.stringify(base))
           if (base.type === 'position'){
             const msg = base as MSPositionMessage
             participants.local.pose = {position: msg.position as [number, number], orientation: msg.orientation}
@@ -81,11 +82,11 @@ export class PositionConnection {
         }
       }
       const onError = () => {
-        console.warn(`Error in position socket: ${url}`)
+        positionLog.warn(`Error in position socket: ${url}`)
         this.positionSocket?.close(3000, 'onError')
       }
       const onClose = () => {
-        positionLog()('onClose() for position socket')
+        positionLog.info('onClose() for position socket')
         this.disconnect()
       }
       const setHandler = () => {
@@ -97,7 +98,7 @@ export class PositionConnection {
       try{
         this.positionSocket = new WebSocket(url)
       }catch(e){
-        console.warn('Failed to connect to position sensor server', e)
+        positionLog.warn('Failed to connect to position sensor server', e)
       }
       setHandler()
     })

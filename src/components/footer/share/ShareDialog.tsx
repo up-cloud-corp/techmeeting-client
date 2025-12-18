@@ -43,7 +43,6 @@ export const ShareDialog: React.FC<ShareDialogProps> = (props:ShareDialogProps) 
             setStep={setStep}
             onFinishInput={(value) => {
               sharedContents.shareContent(createContentOfText(value, map))
-              //  console.debug(`share text: ${value}`)
             }}
             textLabel = "Text"
             multiline = {true}

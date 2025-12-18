@@ -26,7 +26,6 @@ import subjectIcon from '@iconify/icons-material-symbols/subject'
 
 import {contentsToSave, loadToContents} from '@models/ISharedContent'
 import {useTranslation} from '@models/locales'
-import {MessageType} from '@models/conference/DataMessageType'
 import {MSTrack} from '@models/conference/RtcConnection'
 import {createContent, createContentFromText, createContentOfIframe, createContentOfText,
   createContentOfVideo, createContentOfSameRoom} from '@stores/sharedContents/SharedContentCreator'
@@ -39,8 +38,10 @@ import {DialogIconItem} from '@components/utils/DialogIconItem'
 import {Step} from './Step'
 import {conference} from '@models/conference'
 import { dateTimeString } from '@models/utils/date'
-import { isSmartphone } from '@models/utils'
+import { isSmartphone, UCLogger } from '@models/utils'
 import {contents, map, participants} from '@stores/'
+
+const mediaLog = UCLogger.getByFeature("usermedia");
 
 function startCapture() {
   const fps = contents.screenFps
@@ -190,6 +191,9 @@ export const ShareMenu: React.FC<ShareMenuProps> = (props) => {
   const createScreen = () => {
     startCapture().then((ms) => {
       if (ms.getTracks().length) {
+        mediaLog.info("Getting tracks for screen share", {
+          tracks: ms,
+        });
         const content = createContentOfVideo(ms.getTracks(), map, 'screen')
         contents.assignId(content)
         contents.getOrCreateContentTracks(conference.rtcTransports.peer, content.id)
@@ -202,6 +206,8 @@ export const ShareMenu: React.FC<ShareMenuProps> = (props) => {
           }
           conference.addOrReplaceLocalTrack(msTrack)
         })
+      } else {
+        mediaLog.warn("Unable to get tracks for screen share");
       }
     })
     setStep('none')

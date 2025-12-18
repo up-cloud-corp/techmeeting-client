@@ -1,5 +1,9 @@
+import { UCLogger } from "@models/utils"
+
 // config.js
 declare const config:any             //  from ../../config.js included from index.html
+
+const miscLog = UCLogger.getByFeature("misc");
 
 export interface GayazoReturnType{
   url: string,
@@ -15,7 +19,7 @@ export function uploadToGyazo(imageData: Blob):Promise<string> {
     fetch('https://upload.gyazo.com/api/upload', {method: 'POST', body: formData})
     .then(response => response.json())
     .then((responseJson) => {
-      // console.log("URL = " + responseJson.url)
+      // miscLog.info("URL = " + responseJson.url)
       //  To do, add URL and ask user position to place the image
       resolutionFunc(responseJson.url)
     })
@@ -23,7 +27,7 @@ export function uploadToGyazo(imageData: Blob):Promise<string> {
       if (`${error}` === 'TypeError: Failed to fetch'){
         rejectionFunc('type')
       }else{
-        console.error(error)
+        miscLog.error(error)
         rejectionFunc('')
       }
     })
@@ -34,12 +38,12 @@ export function uploadToGyazo(imageData: Blob):Promise<string> {
 
 export function getImageSize(url: string) {
   const promise = new Promise<[number, number]>((resolutionFunc, rejectionFunc) => {
-    console.log("getImageSize url = " + url)
+    miscLog.info("getImageSize url = " + url)
     const img = new Image()
     img.src = url
     img.onload = () => {
       const size:[number, number] = [img.width, img.height]
-      console.log("size = " + size)
+      miscLog.info("size = " + size)
       resolutionFunc(size)
     }
     img.onerror = () => { rejectionFunc([0, 0]) }

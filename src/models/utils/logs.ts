@@ -1,48 +1,67 @@
 // config.js
-declare const d:any               //  from index.html
+type LogLevel = "debug" | "info" | "warn" | "error";
+type FeatureTag = "connection" | "content" | "event" | "form" | "position" | "priority" | "send" | "usermedia" | "render" | "misc";
 
-d.CONNECTIONLOG = true
-d.CONTENTLOG = false
-d.EVENTLOG = false
-d.FORMLOG = false
-d.POSITIONLOG = false
-d.PRIORITYLOG = true
-d.SENDLOG = false
-d.TRACKLOG = false                // show add, remove... of tracks
+/**
+ * Refactored version of the previous logging mechanism.
+ * Aims to provide intuitive and flexible configuration of the console logger.
+ *
+ * @since v1.5.0
+ */
+export class UCLogger {
+  private static LOG_FEATURES: { [key in FeatureTag]: boolean } = {
+    "connection": true,
+    "content": true,
+    "event": true,
+    "form": true,
+    "position": true,
+    "priority": true,
+    "send": true,
+    "usermedia": true,
+    "render": false,
+    "misc": true,
+  }
+  private static LEVELS_ALLOWED: { [key in LogLevel]: boolean } = {
+    "debug": false,
+    "info": true,
+    "warn": true,
+    "error": true,
+  };
 
+  private feature: FeatureTag;
+  private static instances: Map<FeatureTag, UCLogger> = new Map();
 
-export function CONNECTIONLOG(){ return d.CONNECTIONLOG as boolean}
-export function CONTENTLOG() { return d.CONTENTLOG as boolean}
-export function FORMLOG(){ return d.FORMLOG as boolean}
-export function POSITIONLOG(){ return d.POSITIONLOG as boolean}
-export function PRIORITYLOG() { return d.PRIORITYLOG as boolean}
-export function SENDLOG(){ return d.SENDLOG as boolean}
+  private constructor(feature: FeatureTag) {
+    this.feature = feature;
+  }
 
-function noLog(..._data:any[]){}
-export function connLog(){
-  return d.CONNECTIONLOG ? console.log : noLog
-}
-export function connDebug(){
-  return d.CONNECTIONLOG ? console.debug : noLog
-}
-export function sendLog(){
-  return d.SENDLOG ? console.log : noLog
-}
-export function formLog(){
-  return d.FORMLOG ? console.log : noLog
-}
-export function positionLog(){
-  return d.POSITIONLOG ? console.log : noLog
-}
-export function priorityLog(){
-  return d.PRIORITYLOG ? console.log : noLog
-}
-export function priorityDebug(){
-  return d.PRIORITYLOG ? console.debug : noLog
-}
-export function contentLog(){
-  return d.CONTENTLOG ? console.log : noLog
-}
-export function contentDebug(){
-  return d.CONTENTLOG ? console.debug : noLog
+  public static getByFeature(feature: FeatureTag): UCLogger {
+    const existing = UCLogger.instances.get(feature);
+    if (existing !== undefined) {
+      return existing;
+    }
+
+    const logger = new UCLogger(feature);
+    UCLogger.instances.set(feature, logger);
+    return logger;
+  }
+
+  private canLog(level: LogLevel): boolean {
+    return this.featureEnabled() && UCLogger.LEVELS_ALLOWED[level];
+  }
+
+  private log(level: LogLevel, ...data: any[]) {
+    if (this.canLog(level)) {
+      console[level](`[${this.feature}:${level}]`, ...data);
+    }
+  }
+
+  public info = (...data: any[]) => this.log("info", ...data);
+  public debug = (...data: any[]) => this.log("debug", ...data);
+  public warn = (...data: any[]) => this.log("warn", ...data);
+  public error = (...data: any[]) => this.log("error", ...data);
+
+  public featureEnabled(): boolean {
+    return UCLogger.LOG_FEATURES[this.feature];
+  }
 }
