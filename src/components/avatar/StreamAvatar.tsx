@@ -1,6 +1,9 @@
 import {AvatarProps} from './ComposedAvatar'
 import {makeStyles} from '@material-ui/core/styles'
 import React, {useEffect, useRef} from 'react'
+import { UCLogger } from '@models/utils'
+
+const mediaLog = UCLogger.getByFeature("usermedia");
 
 const CENTER = 0.5
 const useStyles = makeStyles({
@@ -39,7 +42,7 @@ function setStream(video: HTMLVideoElement, stream: MediaStream|undefined,
     if (settings.width !== undefined && settings.height !== undefined) {
       video.className = settings.width >= settings.height ? videoLargerWidthClass : videoLargerHeightClass
     } else {
-      console.error('video stream width || height is undefined')
+      mediaLog.error('video stream width || height is undefined')
       video.className = videoLargerWidthClass
     }
   }
@@ -62,7 +65,7 @@ export const StreamAvatar: React.FC<AvatarProps> = (props: AvatarProps) => {
           video.className = settings.width >= settings.height ?
             classes.videoLargerWidth : classes.videoLargerHeight
         } else {
-          console.error('video stream width || height is undefined')
+          mediaLog.error('video stream width || height is undefined')
           video.className = classes.videoLargerWidth
         }
       }
@@ -73,7 +76,7 @@ export const StreamAvatar: React.FC<AvatarProps> = (props: AvatarProps) => {
     const tracks = props.participant.tracks
     if (video && tracks?.avatarStream) {
       if (video.srcObject !== tracks.avatarStream){
-        console.log('StreamAvatar useEffect play()')
+        mediaLog.info('StreamAvatar useEffect play()')
         video.srcObject = tracks.avatarStream
         video.play()
       }

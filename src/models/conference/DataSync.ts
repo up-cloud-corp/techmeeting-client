@@ -5,7 +5,7 @@ import { KickTime } from '@models/KickTime'
 import {t} from '@models/locales'
 import {defaultRemoteInformation, PARTICIPANT_SIZE, RemoteInformation, TrackStates, Viewpoint, VRMRigs} from '@models/Participant'
 import {urlParameters} from '@models/url'
-import {mouse2Str, pose2Str, str2Mouse, str2Pose} from '@models/utils'
+import {mouse2Str, pose2Str, str2Mouse, str2Pose, UCLogger} from '@models/utils'
 import {normV, subV2} from '@models/utils'
 import {assert} from '@models/utils'
 import chat, { ChatMessage, ChatMessageToSend, ServerChatMessage, ChatMessageType } from '@stores/Chat'
@@ -19,9 +19,8 @@ import {BMMessage} from './DataMessage'
 import {DataConnection} from './DataConnection'
 import {MessageType} from './DataMessageType'
 import {notification} from './Notification'
-import {connLog} from '@models/utils'
 
-const syncLog = connLog
+const connectionLog = UCLogger.getByFeature("connection");
 
 export class DataSync{
   connection: DataConnection
@@ -32,7 +31,7 @@ export class DataSync{
     //  window.setInterval(()=>{ this.checkRemoteAlive() }, 1000)
   }
   sendAllAboutMe(bSendRandP: boolean){
-    syncLog()('sendAllAboutMe called.')
+    connectionLog.info('sendAllAboutMe called.')
     this.sendPoseMessage(bSendRandP)
     this.sendMouseMessage()
     participants.local.sendInformation()
@@ -50,7 +49,6 @@ export class DataSync{
   sendMouseMessage(){
     const mouseStr = mouse2Str(participants.local.mouse)
     this.connection.sendMessage(MessageType.PARTICIPANT_MOUSE, mouseStr)
-    //  console.log(`Mouse: ${mouseStr} sent.`)
   }
   sendParticipantInfo(){
     if (!participants.local.informationToSend){ return }
@@ -132,7 +130,7 @@ export class DataSync{
   }
   private onChatMessage(pid: string|undefined, msg: ChatMessageToSend){
     assert(pid)
-    //  console.log(`PRIVATE_MESSAGE_RECEIVED id:${id}, text:${msg.msg}, ts:${msg.ts}`)
+    //  connectionLog.info(`PRIVATE_MESSAGE_RECEIVED id:${id}, text:${msg.msg}, ts:${msg.ts}`)
     const from = participants.find(pid)
     if (from){
       chat.addMessage(new ChatMessage(msg.text, from.id, from.information.name,
@@ -182,7 +180,7 @@ export class DataSync{
           resolve();
         });
       }).catch((error) => {
-        console.error(t('failedToPlaybackSound'), error);
+        connectionLog.error(t('failedToPlaybackSound'), error);
         participants.local.callSoundStatus = 0;
         reject(error);
       });
@@ -244,7 +242,7 @@ export class DataSync{
         newContent.pose = {position: [CONTENT_OUT_OF_RANGE_VALUE, CONTENT_OUT_OF_RANGE_VALUE],
           orientation: content.pose.orientation}
         contents.updateByRemoteRequest([newContent])
-        //  console.log(`content out ${cid}`)
+        //  connectionLog.info(`content out ${cid}`)
       }
     })
   }
@@ -265,7 +263,7 @@ export class DataSync{
         }
       }
       remote.informationReceived = true
-      syncLog()(`Info of ${from} received.`)
+      connectionLog.info(`Info of ${from} received.`)
     }
   }
   private onParticipantTrackState(from:string|undefined, states:TrackStates){
@@ -335,7 +333,7 @@ export class DataSync{
   }
   private onYarnPhone(from:string|undefined, connectedPids:string[]){
     assert(from)
-    //  console.log(`yarn from ${from} local:${participants.localId}`)
+    //  connectionLog.info(`yarn from ${from} local:${participants.localId}`)
     const myself = connectedPids.find(id => id === participants.localId)
     if (myself) {
       if (!participants.yarnPhones.has(from)){
@@ -414,11 +412,11 @@ export class DataSync{
   // tslint:disable-next-line: cyclomatic-complexity
   onBmMessage(msg: BMMessage){
     if (msg.t!==MessageType.AUDIO_LEVEL && msg.t!==MessageType.PARTICIPANT_MOUSE){
-      syncLog()(`Recv data msg: ${msg.t}: ${msg.v}`)
+      connectionLog.info(`Recv data msg: ${msg.t}: ${msg.v}`)
     }
-    //syncLog()(`Recv data msg: ${JSON.stringify(msgs)}.`)
+    //connectionLog.info(`Recv data msg: ${JSON.stringify(msgs)}.`)
     if (msg.v === undefined) {
-      console.error(`Recv data msg ${msg.t} with value of undefined.`)
+      connectionLog.error(`Recv data msg ${msg.t} with value of undefined.`)
       return
     }
     recorder.recordMessage(msg)
@@ -453,7 +451,7 @@ export class DataSync{
       case MessageType.MOUSE_OUT: this.onMouseOut(JSON.parse(msg.v)); break
       case MessageType.CONTENT_OUT: this.onContentOut(JSON.parse(msg.v)); break
       default:
-        console.log(`Unhandled message type ${msg.t} from ${msg.p}`)
+        connectionLog.error(`Unhandled message type ${msg.t} from ${msg.p}`)
         break
     }
     //this.checkInfo()
@@ -463,7 +461,7 @@ export class DataSync{
     const remotes = Array.from(participants.remote.values())
     const ids = remotes.filter(remote => !remote.informationReceived).map(remote => remote.id)
     if (ids.length){
-      syncLog()(`checkInfo sent ${ids}`)
+      connectionLog.info(`checkInfo sent ${ids}`)
       this.connection.sendMessage(MessageType.REQUEST_TO, ids)
     }
   } */

@@ -6,8 +6,9 @@ import errorInfo from "@stores/ErrorInfo";
 import roomInfo from "@stores/RoomInfo";
 import axios from 'axios';
 import React, { useEffect } from "react";
-import { connLog } from "@models/utils";
+import { UCLogger } from "@models/utils";
 
+const connectionLogger = UCLogger.getByFeature("connection");
 
 export interface GoogleAuthLoginProps {
   doAuth: boolean;
@@ -19,22 +20,22 @@ export interface GoogleAuthLoginProps {
 export const GoogleAuthLogin: React.FC<GoogleAuthLoginProps> = (props: GoogleAuthLoginProps) => {
   const login = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
-      connLog()(`Auth onSuccess called.`)
+      connectionLogger.debug(`Auth onSuccess called.`)
       const userInfo = await axios.get(
         'https://www.googleapis.com/oauth2/v3/userinfo',
         { headers: { Authorization: 'Bearer ' + tokenResponse.access_token } },
       )
-      connLog()(`Auth userInfo: ${JSON.stringify(userInfo)}.`)
+      connectionLogger.debug(`Auth userInfo: ${JSON.stringify(userInfo)}.`)
       // Second time call conference.auth to check if the user has the permission to enter the room
       roomInfo.loginEmail = userInfo.data.email
       if (!conference.room){
         conference.enter(props.room, tokenResponse.access_token, userInfo.data.email).then((result) => {
-          connLog()(`GoogleAuth enter result = ${result}`)
+          connectionLogger.debug(`GoogleAuth enter result = ${result}`)
           errorInfo.clear()
           errorInfo.startToListenRtcTransports()
           roomInfo.loginEmail = userInfo.data.email
         }).catch(e=>{
-          connLog()(`GoogleAuth enter catch=${e}`)
+          connectionLogger.debug(`GoogleAuth enter catch=${e}`)
           // when the result is not success, it will show the error message in the dialog
           errorInfo.type = 'noEnterPremission'
         })

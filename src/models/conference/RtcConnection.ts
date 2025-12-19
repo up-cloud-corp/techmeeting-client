@@ -9,7 +9,7 @@ import {MSCreateTransportMessage, MSMessage, MSPeerMessage, MSConnectMessage, MS
   MSCheckAdminMessage,
   RoomLoginInfo} from './MediaMessages'
 import * as mediasoup from 'mediasoup-client';
-import {connLog} from '@models/utils'
+import {UCLogger} from '@models/utils'
 import {RtcTransportStatsGot} from './RtcTransportStatsGot'
 import {messageLoads} from '@stores/MessageLoads'
 
@@ -43,7 +43,7 @@ export interface RemotePeer{
 declare const config:any                  //  from ../../config.js included from index.html
 
 //  Log level and module log options
-const rtcLog = connLog
+const connectionLogger = UCLogger.getByFeature("connection");
 
 const SEND_INTERVAL = 10 * 1000
 
@@ -110,7 +110,7 @@ export class RtcConnection{
           type: 'pong',
           peer: this.peer_
         }
-        connLog()("RtcC: pong sent.")
+        connectionLogger.debug("gpong sent.")
         this.mainServer.send(JSON.stringify(msg))
         this.lastSendTime = now
       }
@@ -118,7 +118,7 @@ export class RtcConnection{
       const deadline = now + timeToProcess
       while(this.rtcQueue.length && now < deadline){
         const msg = this.rtcQueue.shift()!
-        connLog()(`RtcC: processMessag(${msg.type})`, msg)
+        connectionLogger.info(`gprocessMessag(${msg.type})`, msg)
         const func = this.handlers.get(msg.type)
         if (func){
           func.bind(this)(msg)
@@ -296,15 +296,15 @@ export class RtcConnection{
       }
       const onMessageEvent = (ev: MessageEvent<any>)=> {
         const msg = JSON.parse(ev.data) as MSMessage
-        connLog()(`RtcC: onMessage(${msg.type})`)
+        connectionLogger.info(`gonMessage(${msg.type})`)
         this.rtcQueue.push(msg)
       }
       const onCloseEvent = (e: CloseEvent) => {
-        connLog()('RtcC: onClose() rtcSocket for mainServer code:' + e.code)
+        connectionLogger.info('gonClose() rtcSocket for mainServer code:' + e.code)
         this.disconnect()
       }
       const onErrorEvent = (ev:any) => {
-        console.error(`RtcC: Error in rtcSocket for ${config.mainServer}`, ev)
+        console.error(`gError in rtcSocket for ${config.mainServer}`, ev)
         this.disconnect(3000, 'onError')
       }
 
@@ -328,7 +328,7 @@ export class RtcConnection{
     if (!this.mainServer){
       console.error(`RTCConnection: preConnect() must be called before connect().`)
     }
-    connLog()(`RtcC: connect(${room}, ${peer}, ${token}, ${email})`)
+    connectionLogger.info(`gconnect(${room}, ${peer}, ${token}, ${email})`)
     const promise = new Promise<string>((resolve, reject)=>{
       this.connected = true
       const msg:MSConnectMessage = {
@@ -340,14 +340,14 @@ export class RtcConnection{
       }
       if (this.prevPeer) {
         msg.peerJustBefore = this.prevPeer
-        connLog()(`reconnect with previous peer id '${this.prevPeer}'`)
+        connectionLogger.info(`reconnect with previous peer id '${this.prevPeer}'`)
       }
       this.sendWithPromise(msg, resolve, reject)
     })
     return promise
   }
   private onConnect(base: MSMessage){
-    connLog()(`RtcC: onConnect( ${JSON.stringify(base)}`)
+    connectionLogger.info(`gonConnect( ${JSON.stringify(base)}`)
     const msg = base as MSConnectMessage
     if (msg.error){
       //  console.log(`onConnect failed: ${msg.error}`)
@@ -360,11 +360,11 @@ export class RtcConnection{
           peer:msg.peer,
           room:msg.room
         }
-        connLog()(`RtcC: join sent ${JSON.stringify(joinMsg)}`)
+        connectionLogger.info(`gjoin sent ${JSON.stringify(joinMsg)}`)
         this.mainServer.send(JSON.stringify(joinMsg))
         this.lastSendTime = Date.now()
         this.loadDevice(msg.peer).then(()=>{
-          connLog()(`RtcC: loadDevice success.`)
+          connectionLogger.info(`gloadDevice success.`)
           this.resolveMessage(msg, msg.peer)
           this.emitter.emit('connect')
           //  this.startPingPong()
@@ -387,7 +387,7 @@ export class RtcConnection{
     return false
   }
   public disconnect(code?:number, msg?:string){
-    console.info(`RtcC: RTCConnection disconnect() called.`)
+    console.info(`gRTCConnection disconnect() called.`)
     const promise = new Promise<void>((resolve)=>{
       const func = ()=>{
         if (this.mainServer && this.mainServer.readyState === WebSocket.OPEN && this.mainServer.bufferedAmount){
@@ -400,7 +400,7 @@ export class RtcConnection{
           if (this.connected){
             this.connected = false
             this.emit('disconnect')
-            connLog()(`RtcC: mainServer emits 'disconnect'`)
+            connectionLogger.info(`gmainServer emits 'disconnect'`)
           }
           this.mainServer = undefined
           if (this.peer_){
@@ -617,9 +617,9 @@ export class RtcConnection{
       this.rejectMessage(msg, msg.error)
     }else{
       const consumerOptions: mediasoup.types.ConsumerOptions = {
-        id: msg.consumer,
-        producerId: msg.producer,
-        kind: msg.kind,
+        id: msg.consumer!,
+        producerId: msg.producer!,
+        kind: msg.kind!,
         rtpParameters: msg.rtpParameters!
       }
       this.resolveMessage(msg, consumerOptions)

@@ -6,10 +6,12 @@ import {stopMpTrack, startMpTrack} from './mediapipeCamera'
 import {stopFaceTrack, createLocalCamera} from './faceCamera'
 import {MSTrack} from '@models/conference/RtcConnection'
 import {conference} from '@models/conference'
+import { UCLogger } from '@models/utils'
+
+const eventLog = UCLogger.getByFeature("event");
 
 //  mic device selection
 export function createLocalMic() {
-  //  console.log(`createLocalMic() called`)
   const promise = new Promise<MSTrack>((resolutionFunc, rejectionFunc) => {
     const did = participants.local.devicePreference.audioinput
     navigator.mediaDevices.getUserMedia({
@@ -38,8 +40,7 @@ function isCameraMuted(){
 }
 
 const disposes:IReactionDisposer[] = []
-function onDeviceChange(ev: Event){
-  //console.log('onDeviceChange called', ev)
+function onDeviceChange(_: Event){
   const old = {
     audioinput: participants.local.devicePreference.audioinput,
     videoinput: participants.local.devicePreference.videoinput,
@@ -50,7 +51,7 @@ function onDeviceChange(ev: Event){
   conference.setLocalMicTrack(undefined).then(()=>{
     participants.local.devicePreference.audioinput = undefined
     participants.local.audioLevel = 0
-    for(const prop in old){
+    for(const _ in old){
       Object.assign(participants.local.devicePreference, old)
     }
   })
@@ -58,8 +59,7 @@ function onDeviceChange(ev: Event){
 export function inputChangeObservationStart(){
   navigator.mediaDevices.addEventListener('devicechange', onDeviceChange)
   disposes.push(autorun(() => {
-    // console.log('[MIC]mic observer autorun called')
-    //console.log('mic observer autorun called')
+    eventLog.info('Mic observer autorun called');
     let did = participants.local.devicePreference.audioinput
     if (isMicMuted() || did===undefined){
       //  When muted or device not selected. remove mic track and finish.
@@ -67,7 +67,6 @@ export function inputChangeObservationStart(){
         participants.local.audioLevel = 0
         participants.local.isMicMuting = false
       })
-      // console.log('mic track removed')
       return
     }
 
@@ -75,14 +74,17 @@ export function inputChangeObservationStart(){
     navigator.mediaDevices.enumerateDevices().then(infos => { //  Check if the device in the preferencec exists.
       const device = infos.find((info) => info.deviceId === did)
       if (!device && infos.length){
-        //console.log(`Device (${did}) not found. change input device.`)
+        eventLog.warn(`Device not found. Please change input device.`, {
+          deviceId: did,
+          devicesList: infos,
+        });
         conference.setLocalMicTrack(undefined).then(()=>{
           participants.local.devicePreference.audioinput = infos[0].deviceId
           participants.local.audioLevel = 0
         })
         return  //  autorun again
       }
-      console.log(`did (${did}) found. create a new mic track`)
+      eventLog.info(`Device found. Creating a new mic track.`, { deviceId: did });
       const track = conference.getLocalMicTrack()
       if (track && track.deviceId === did) { return }
       createLocalMic().then((newTrack)=>{

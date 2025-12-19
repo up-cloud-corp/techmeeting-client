@@ -8,6 +8,9 @@ import { throttle } from 'lodash'
 import Euler from 'kalidokit/dist/utils/euler'
 import {GetPromiseGLTFLoader} from '@models/api/GLTF'
 import { participants } from '@stores/index'
+import { UCLogger } from '@models/utils'
+
+const miscLog = UCLogger.getByFeature("misc");
 
 interface Member{
   clock: THREE.Clock
@@ -122,7 +125,7 @@ export const VRMAvatar: React.FC<{participant:ParticipantBase}> = (props: {parti
           render3d(props.participant.pose.orientation, props.participant.vrmRigs)
         })
       }).catch((e)=>{
-        console.log('Failed to load VRM', e)
+        miscLog.error('Failed to load VRM', e)
       })
     }))
 
@@ -132,12 +135,12 @@ export const VRMAvatar: React.FC<{participant:ParticipantBase}> = (props: {parti
       //  /*
       const oriOffset = (oriIn+720) % 360 - 180
       const ori = 180 + oriOffset / 2
-      //console.log(`ori: ${ori}`)
+      //miscLog.info(`ori: ${ori}`)
 
       const mem = memberRef.current!
       if (props.participant === participants.local && rig && rig.face){
         const face = rig.face as Kalidokit.TFace
-        //console.log(`Local Face Ori:${face.head.y}`)
+        //miscLog.info(`Local Face Ori:${face.head.y}`)
         //const pose = rig.pose as Kalidokit.TPose
         //const cur = (pose.Hips?.rotation?.y || 0) + pose.Spine.y + face.head.y
         const cur = face.head.y
@@ -260,7 +263,7 @@ let oldLookTarget = new THREE.Euler()
 function rigFace(vrm:VRM, riggedFace:Kalidokit.TFace){
     if(!vrm){return}
     const rot = {x:riggedFace.head.x-0.1, y:riggedFace.head.y, z:riggedFace.head.z}
-    //console.log(`rigRot: ${JSON.stringify(rot)}`)
+    //miscLog.info(`rigRot: ${JSON.stringify(rot)}`)
     rigRotation(vrm, "Neck", rot, 0.7);
 
     // Blendshapes and Preset Name Schema
@@ -269,7 +272,7 @@ function rigFace(vrm:VRM, riggedFace:Kalidokit.TFace){
 
     // Simple example without winking. Interpolate based on old blendshape, then stabilize blink with `Kalidokit` helper function.
     // for VRM, 1 is closed, 0 is open.
-    //console.log(`face eye:${riggedFace.eye.l},${riggedFace.eye.r}`)
+    //miscLog.info(`face eye:${riggedFace.eye.l},${riggedFace.eye.r}`)
     const eyeL = clamp(1-riggedFace.eye.l, 0, 1)
     const eyeR = clamp(1-riggedFace.eye.r, 0, 1)
     // riggedFace.eye = Kalidokit.Face.stabilizeBlink(riggedFace.eye, riggedFace.head.y)
@@ -335,7 +338,7 @@ function vrmSetPose (vrm:VRM, rigs?:VRMRigs){
     rigRotation(vrm, "RightLowerLeg", rigs.pose.RightLowerLeg, 1, .3);
   }else{
     if (rigs.face){
-      //console.log(`head: ${JSON.stringify(rigs.face.head)}`)
+      //miscLog.info(`head: ${JSON.stringify(rigs.face.head)}`)
       const rot = {x:rigs.face.head.x/3-0.3, y:rigs.face.head.y/2, z:rigs.face.head.z/2}
       rigRotation(vrm, "Chest", rot, 0.25, .3);
       rigRotation(vrm, "Spine", rot, 0.45, .3);

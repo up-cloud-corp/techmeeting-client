@@ -7,19 +7,19 @@ import MicOffIcon from '@material-ui/icons/MicOff'
 import PlayArrowIcon from '@material-ui/icons/PlayArrow'
 import RecordIcon from '@material-ui/icons/FiberManualRecord'
 import SpeakerOffIcon from '@material-ui/icons/VolumeOff'
-import {addV2, mulV2, normV, rotateVector2DByDegree, subV2} from '@models/utils'
+import {addV2, mulV2, normV, rotateVector2DByDegree, subV2, UCLogger} from '@models/utils'
 import {LocalParticipant} from '@stores/participants/LocalParticipant'
 import {PlaybackParticipant} from '@stores/participants/PlaybackParticipant'
 import {RemoteParticipant} from '@stores/participants/RemoteParticipant'
 import {participants} from '@stores/participants'
 import {Observer} from 'mobx-react-lite'
 import React from 'react'
-import {SignalQualityIcon} from './SignalQuality'
 import {VRMAvatar} from '../../avatar/VRMAvatar'
 import { ComposedAvatar } from '@components/avatar/ComposedAvatar'
 import _ from 'lodash'
 
-const renderLog = false ? console.log : (..._:any)=>{}
+const renderLogger = UCLogger.getByFeature("render");
+const renderLog = renderLogger.debug;
 
 interface StylePropsPose {
   position: [number, number],

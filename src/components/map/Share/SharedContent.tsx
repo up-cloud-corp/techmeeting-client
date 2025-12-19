@@ -1,19 +1,21 @@
 import {ISharedContent} from '@models/ISharedContent'
 import {SharedContentInfo} from '@models/ISharedContent'
-import {contentLog} from '@models/utils'
 import React from 'react'
 import {MouseOrTouch, RndContent} from './RndContent'
 export interface ISharedContentProps{
   content: ISharedContent,
 }
 import {contents, map} from '@stores/'
+import { UCLogger } from '@models/utils'
+
+const contentLog = UCLogger.getByFeature("content");
 
 export const sharedContentHandler = (props: {content:SharedContentInfo}) => {
   return {
     onClose: (evt: MouseOrTouch) => {
       if (props.content.playback) return //  for playback contents do nothing
 
-      contentLog()('RndContent onClose for ', props.content.id)
+      contentLog.info('RndContent onClose for ', props.content.id)
       evt.stopPropagation()
       map.keyInputUsers.delete(props.content.id)
       map.keyInputUsers.delete('contentForm')

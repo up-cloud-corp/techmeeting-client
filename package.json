@@ -23,7 +23,7 @@
     "lodash": "^4.17.21",
     "material-ui-dropzone": "^3.3.0",
     "md5": "^2.3.0",
-    "mediasoup-client": "^3.7.17",
+    "mediasoup-client": "^3.15.0",
     "mobx": "*",
     "mobx-react-lite": "^3.4.0",
     "pdfjs-dist": "2.7.570",

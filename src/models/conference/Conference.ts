@@ -1,5 +1,5 @@
 import {KickTime} from '@models/KickTime'
-import {assert, fixIdString, connLog} from '@models/utils'
+import {assert, fixIdString, UCLogger} from '@models/utils'
 import {default as participants} from '@stores/participants/Participants'
 import contents from '@stores/sharedContents/SharedContents'
 import {ClientToServerOnlyMessageType, StringArrayMessageTypes} from './DataMessageType'
@@ -18,13 +18,15 @@ import { PositionConnection } from './PositionConnection'
 import { ISharedContent } from '@models/ISharedContent'
 import { datadogLogs } from '@datadog/browser-logs'
 
+const connectionLog = UCLogger.getByFeature("connection");
+
 // config.js
 declare const d:any                  //  from index.html
 
 // config.js
 declare const config:any             //  from ../../config.js included from index.html
 
-//  Cathegolies of BMMessage's types
+// Categories of BMMessage's types
 const stringArrayMessageTypesForClient = new Set(StringArrayMessageTypes)
 stringArrayMessageTypesForClient.add(ClientToServerOnlyMessageType.CONTENT_UPDATE_REQUEST_BY_ID)
 stringArrayMessageTypesForClient.add(ClientToServerOnlyMessageType.REQUEST_PARTICIPANT_STATES)
@@ -91,7 +93,7 @@ export class Conference {
   }
   public enter(room: string, token:string|undefined, email:string|undefined):Promise<string>{
     room = fixIdString(room)
-    connLog()(`enter to room ${room}.`)
+    connectionLog.info(`enter to room ${room}.`)
 
     const promise = new Promise<string>((resolve, reject) => {
       //  check last kicked time and stop the operation if recently kicked.
@@ -117,7 +119,7 @@ export class Conference {
         datadogLogs.setUser({ room: room, peer: peer })
       }
       this.rtcTransports.connect(room, peer, token, email).then((peer)=>{
-        connLog()('rtc connected.')
+        connectionLog.info('rtc connected.')
         //  enter succeed. set room and authInfo to the conference.
         this.room_ = room
         this.setAuthInfo(token, email)
@@ -167,7 +169,7 @@ export class Conference {
 
           //  Connect to data server to get contents and participants info.
           if (this.dataConnection.isConnected()){
-            console.log(`DataConnection is connected.`)
+            connectionLog.info(`DataConnection is connected.`)
             if (this.dataConnection.peer !== peer){
               this.dataConnection.disconnect().then(()=>{
                 window.setTimeout(()=>{
@@ -178,7 +180,7 @@ export class Conference {
               })
             }else{
               this.dataConnection.sync.sendAllAboutMe(true)  //  send paritipant info
-              console.log('Reuse the old data connection.')
+              connectionLog.info('Reuse the old data connection.')
               resolve("success")
             }
           }else{
@@ -192,12 +194,12 @@ export class Conference {
             this.positionConnection.connect()
           }
 
-          //  To access from debug console, add object d to the window.
+          //  To access from debug connectionLogger, add object d to the window.
           d.conference = this
-        }).catch(() => { console.log('Device enumeration error') })
+        }).catch(() => { connectionLog.info('Device enumeration error') })
       //  When connect failed:
       }).catch((e)=>{
-        //  console.log(`Auth failed to enter ${e}`)
+        //  connectionLogger.info(`Auth failed to enter ${e}`)
         this.rtcTransports.disconnect(3100, 'Auth failed')
         reject(e)
       })
@@ -243,7 +245,7 @@ export class Conference {
     this.rtcTransports.clear()
   }
   private onRtcDisconnect = () => {
-    console.log(`onRtcDisconnect called.`)
+    connectionLog.info(`onRtcDisconnect called.`)
     //*
     inputChangeObservationStop()
     this.clearRtc()
@@ -258,7 +260,7 @@ export class Conference {
   }
 
   private onDataDisconnect = () => {
-    console.log(`onDataDisconnect called.`)
+    connectionLog.info(`onDataDisconnect called.`)
     //*
     const func = ()=>{
       if (this.rtcTransports.isConnected()){
@@ -408,7 +410,7 @@ export class Conference {
 
   //  event
   private onRemoteUpdate = (arg: [MSRemotePeer[]]) => {
-    // console.log("[MIC]onRemoteUpdate before:" + this.rtcTransports.localProducers.length)
+    // connectionLogger.info("[MIC]onRemoteUpdate before:" + this.rtcTransports.localProducers.length)
     const msremotes = arg[0]
     for (const msr of msremotes){
       if (msr.peer === this.rtcTransports.peer) continue
@@ -444,7 +446,7 @@ export class Conference {
         this.onProducerAdded(producers, newRemote)
       }
     }
-    // console.log("[MIC]onRemoteUpdate after:" + this.rtcTransports.localProducers.length)
+    // connectionLogger.info("[MIC]onRemoteUpdate after:" + this.rtcTransports.localProducers.length)
   }
   private onRemoteLeft = (args: [string[]]) => {
     const remoteIds = args[0]
@@ -484,10 +486,10 @@ export class Conference {
         }else{
           contents.addTrack(producer.peer.peer, producer.role, consumer.track)
         }
-        connLog()(`Conference.addConsumer(): p:${producer.id} consumed.`)
+        connectionLog.info(`Conference.addConsumer(): p:${producer.id} consumed.`)
         resolve()
       }).catch((e) => {
-        console.error(`Conference.addConsumer() p:${producer.id} ${e}`)
+        connectionLog.error(`Conference.addConsumer() p:${producer.id} ${e}`)
         reject(e)
       })
     })
@@ -501,7 +503,7 @@ export class Conference {
       }else{
         contents.removeTrack(producer.peer.peer, producer.role, producer.kind)
       }
-      console.log(`[consumer]removeConsumer: ${producer.consumer?.id} ${producer.id}`)
+      connectionLog.info(`[consumer]removeConsumer: ${producer.consumer?.id} ${producer.id}`)
       producer.consumer = undefined
     }
   }
@@ -513,7 +515,7 @@ export class Conference {
       const c = contents.find(cid)
       if (c) localRtcContents.push(c)
     }
-    //console.log(`sendLocalRtcContents called for ${participants.localId} ${JSON.stringify(localRtcContents)}`)
+    //connectionLogger.info(`sendLocalRtcContents called for ${participants.localId} ${JSON.stringify(localRtcContents)}`)
     this.dataConnection.sync.sendContentUpdateRequest(participants.localId, localRtcContents)
   }
 }

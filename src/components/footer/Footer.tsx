@@ -17,7 +17,7 @@ import SpeakerOffIcon from '@material-ui/icons/VolumeOff'
 import SpeakerOnIcon from '@material-ui/icons/VolumeUp'
 import {useTranslation} from '@models/locales'
 import {useObserver} from 'mobx-react-lite'
-import React, {useEffect, useRef} from 'react'
+import React, {useCallback, useEffect, useRef} from 'react'
 import {AdminConfigForm} from './adminConfig/AdminConfigForm'
 import {BroadcastControl} from './BroadcastControl'
 import {FaceControl} from './FaceControl'
@@ -28,7 +28,7 @@ import {StereoAudioSwitch} from './StereoAudioSwitch'
 import { player, recorder } from '@models/recorder'
 import {participants, map} from '@stores/'
 import { RecorderStepType } from './recorder/RecorderDialog'
-
+import useMicControl from '@hooks/useMicControl'
 
 const useStyles = makeStyles({
   root:{
@@ -213,7 +213,7 @@ export const Footer: React.FC<{height?:number}> = (props) => {
   }
 
   //  Device list update when the user clicks to showFooter the menu
-  function updateDevices(ev:React.PointerEvent | React.MouseEvent | React.TouchEvent) {
+  function updateDevices(_:React.PointerEvent | React.MouseEvent | React.TouchEvent) {
     navigator.mediaDevices.enumerateDevices()
     .then(setDeviceInfos)
     .catch(() => { console.log('Device enumeration error') })
@@ -221,13 +221,30 @@ export const Footer: React.FC<{height?:number}> = (props) => {
 
   //  observer
   const mute = useObserver(() => ({
-    muteA: participants.local.muteAudio,  //  mic
     muteS: participants.local.muteSpeaker,  //  speaker
     muteV: participants.local.muteVideo,  //  camera
     onStage: participants.local.physics.onStage
   }))
   const fabSize = props.height
   const iconSize = props.height ? props.height * 0.7 : 36
+
+  /**
+  * @since v1.5.0 Added to encapsulate mic mute global state manipulation
+  */
+  const {micStatus, muteMic, unmuteMic} = useMicControl(1500);
+
+  const onMicButtonClick = useCallback(() => {
+    if (micStatus === true) {
+      muteMic();
+    } else {
+      unmuteMic();
+    }
+  }, [micStatus]);
+
+  const onMicButtonMore = useCallback((ev) => {
+    updateDevices(ev)
+    setMicMenuEl(ev.currentTarget)
+  }, []);
 
   return <div ref={containerRef} className={classes.root}>
     <Collapse in={showFooter} classes={classes}>
@@ -240,7 +257,7 @@ export const Footer: React.FC<{height?:number}> = (props) => {
           }
           participants.local.saveMediaSettingsToStorage()
         }}
-        onClickMore = { (ev) => {
+        onClickMore = {(ev) => {
           updateDevices(ev)
           setSpeakerMenuEl(ev.currentTarget)
         }}
@@ -253,36 +270,41 @@ export const Footer: React.FC<{height?:number}> = (props) => {
         {getMenuItems('audiooutput')}
       </Menu> : undefined}
 
-      <FabWithTooltip size={fabSize} color={mute.muteA ? 'primary' : 'secondary' } aria-label="mic"
-        title = {acceleratorText2El(t('ttMicMute'))}
-        onClick = { () => {
-          // mic on off
-          let diff = Date.now() - participants.local.isMicMutingTime
-          if(diff < 1500 || participants.local.isMicMuting) return
-          participants.local.isMicMuting = true
-          participants.local.isMicMutingTime = Date.now()
-          // set mute
-          participants.local.muteAudio = !mute.muteA
-          if (!participants.local.muteAudio) {
-            participants.local.muteSpeaker = false
-          }
-          participants.local.saveMediaSettingsToStorage()
-        }}
-        onClickMore = { (ev) => {
-          updateDevices(ev)
-          setMicMenuEl(ev.currentTarget)
-        } }
-        >
-        {mute.muteA ? <MicOffIcon style={{width:iconSize, height:iconSize}} /> :
-          mute.onStage ?
-            <Icon icon={megaphoneIcon} style={{width:iconSize, height:iconSize}} color="gold" />
-            : <MicIcon style={{width:iconSize, height:iconSize}} /> }
+      {/* Microphone control */}
+      <FabWithTooltip
+        size={fabSize}
+        color={micStatus ? "primary" : "secondary"}
+        aria-label="mic"
+        title={acceleratorText2El(t("ttMicMute"))}
+        onClick={onMicButtonClick}
+        onClickMore={onMicButtonMore}
+      >
+        {micStatus ? (
+          <MicOffIcon style={{ width: iconSize, height: iconSize }} />
+        ) : mute.onStage ? (
+          <Icon
+            icon={megaphoneIcon}
+            style={{ width: iconSize, height: iconSize }}
+            color="gold"
+          />
+        ) : (
+          <MicIcon style={{ width: iconSize, height: iconSize }} />
+        )}
       </FabWithTooltip>
-      {micMenuEl ? <Menu anchorEl={micMenuEl} keepMounted={true}
-        open={Boolean(micMenuEl)} onClose={() => { closeMicMenu('') }}>
-        {getMenuItems('audioinput')}
-      </Menu> : undefined}
 
+      { /* Mic control more menu */
+        micMenuEl &&
+          <Menu
+            anchorEl={micMenuEl}
+            keepMounted={true}
+            open={Boolean(micMenuEl)}
+            onClose={() => { closeMicMenu('') }}
+          >
+            {getMenuItems('audioinput')}
+          </Menu>
+      }
+
+      {/* Camera control */}
       <FabMain size={fabSize} color={mute.muteV ? 'primary' : 'secondary'} aria-label="camera"
         onClick = { () => {
           // camera button lock
@@ -304,6 +326,8 @@ export const Footer: React.FC<{height?:number}> = (props) => {
         {mute.muteV ? <VideoOffIcon style={{width:iconSize, height:iconSize}} />
           : <VideoIcon style={{width:iconSize, height:iconSize}} /> }
       </FabMain>
+
+      {/* Video control menu */}
       {videoMenuEl ? <Menu anchorEl={videoMenuEl} keepMounted={true}
         open={Boolean(videoMenuEl)} onClose={() => { closeVideoMenu('') }}>
         {getMenuItems('videoinput')}
